@@ -33,6 +33,27 @@ impl SecretKey {
         SecretKey { a, b }
     }
 
+    pub fn new_from(bytes: Vec<u8>) -> Self {
+        let mut hasher = Sha512::default();
+
+        hasher.input(bytes.as_slice());
+
+        let s = Scalar::from_hash(hasher);
+        let mut rng = StdRng::from_seed(s.to_bytes());
+
+        let mut a = [0x00u8; 32];
+        rng.fill_bytes(&mut a);
+        utils::clamp_bytes(&mut a);
+        let a = Scalar::from_bits(a);
+
+        let mut b = [0x00u8; 32];
+        rng.fill_bytes(&mut b);
+        utils::clamp_bytes(&mut b);
+        let b = Scalar::from_bits(b);
+
+        SecretKey::new(a, b)
+    }
+
     /// Derive the secret to deterministically construct a [`PublicKey`]
     pub fn public_key(&self) -> PublicKey {
         let a_g = utils::mul_by_basepoint_ristretto(&self.a);

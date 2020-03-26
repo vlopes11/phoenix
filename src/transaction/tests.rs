@@ -298,90 +298,59 @@ fn transactions_with_transparent_notes() {
 
 #[test]
 fn rpc_transaction() {
-    let mut db = temp_dir();
-    db.push("rpc_transaction");
-    let mut root = Root::<_, Blake2b>::new(db.as_path()).unwrap();
+    let mut root = Root::<_, Blake2b>::new("/tmp/phoenix-meme").unwrap();
     let mut state: Db<_> = root.restore().unwrap();
 
     let mut senders = vec![];
     let mut receivers = vec![];
 
     // Setup senders
-    senders.push(generate_keys());
-    senders.push(generate_keys());
+    senders.push(generate_keys_from(vec![49, 49, 49, 49]));
 
     // Setup receivers
+    receivers.push(generate_keys_from(vec![48, 48, 48, 48]));
     receivers.push(generate_keys());
-    receivers.push(generate_keys());
-
-    let mut inputs = vec![];
-    let mut outputs = vec![];
 
     // Store an unspent note of 100
+    let pk = senders[0].2;
     let sk = senders[0].0;
-    inputs.push(create_and_store_unspent_rpc_note::<TransparentNote, Blake2b>(&mut state, sk, 100));
-
-    // Store an unspent note of 50
-    let sk = senders[1].0;
-    inputs.push(create_and_store_unspent_rpc_note::<TransparentNote, Blake2b>(&mut state, sk, 50));
+    let input = create_and_store_unspent_note::<TransparentNote, Blake2b>(&mut state, &pk, 100);
+    let input = input.3.to_transaction_input(sk);
+    let nul = input.nullifier();
+    println!("sender sk: {}", sk);
+    println!("sender vk: {}", senders[0].1);
 
     // Persist changes to disk
     root.set_root(&mut state).unwrap();
 
+    // Show us the keys!
+    println!("{}", receivers[0].0);
+
+    // Now make the transactions. Fucking Victor didn't make this easy for me
     // Create an output of 97
     let pk = &receivers[0].2;
-    outputs.push(create_output_rpc_note::<TransparentNote>(pk, 97));
+    let output = create_output_note::<TransparentNote>(pk, 97);
+    let output = output.2.to_transaction_output(97, output.3, *pk);
+    println!("{}", pk);
 
-    // Create an output of 50
-    let pk = &receivers[1].2;
-    outputs.push(create_output_rpc_note::<ObfuscatedNote>(pk, 50));
-
-    let mut transaction = rpc::Transaction::default();
-
-    inputs
-        .into_iter()
-        .for_each(|input| transaction.inputs.push(input));
-
-    outputs
-        .into_iter()
-        .for_each(|output| transaction.outputs.push(output));
-
-    let mut transaction = Transaction::try_from_rpc_transaction(db.as_path(), transaction).unwrap();
-
-    // Persist changes to disk
-    root.set_root(&mut state).unwrap();
-
-    // It is not possible to verify an unproven transaction
-    assert!(transaction.verify().is_err());
-
-    transaction.prove().unwrap();
-    transaction.verify().unwrap();
-
-    assert_eq!(3, transaction.fee().value());
-
-    let proof = transaction.r1cs().cloned().unwrap();
-    let commitments = transaction.commitments().clone();
-
-    let transaction: rpc::Transaction = transaction.into();
-    let mut transaction = Transaction::try_from_rpc_transaction(db.as_path(), transaction).unwrap();
-
-    let deserialized_proof = transaction.r1cs().cloned().unwrap();
-    let deserialized_commitments = transaction.commitments().clone();
-
-    assert!(!commitments.is_empty());
-    assert_eq!(commitments, deserialized_commitments);
-    assert_eq!(proof.to_bytes(), deserialized_proof.to_bytes());
-
-    transaction.verify().unwrap();
-
-    assert_eq!(3, transaction.fee().value());
-
-    // Clean up the db
-    fs::remove_dir_all(db.as_path()).expect("could not remove temp db");
+    let mut tx = Transaction::default();
+    tx.push(input);
+    tx.push(output);
+    tx.prove().unwrap();
+    println!("{:?}", tx.items()[1].note());
+    println!("{:?}", tx.fee());
 }
 
 fn generate_keys() -> (SecretKey, ViewKey, PublicKey) {
     let sk = SecretKey::default();
+    let vk = sk.view_key();
+    let pk = sk.public_key();
+
+    (sk, vk, pk)
+}
+
+fn generate_keys_from(bytes: Vec<u8>) -> (SecretKey, ViewKey, PublicKey) {
+    let sk = SecretKey::new_from(bytes);
     let vk = sk.view_key();
     let pk = sk.public_key();
 

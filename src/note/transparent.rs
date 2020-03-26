@@ -26,7 +26,7 @@ pub struct TransparentNote {
 
 impl fmt::Debug for TransparentNote {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "TransparentNote {{ utxo: {:?}, value: {:?}, nonce: {:?}, r_g: {:?}, pk_r: {:?}, idx: {:?}, commitment: {:?}, encrypted_blinding_factor: {:?} }}", self.utxo, self.value, self.nonce, self.r_g, self.pk_r, self.idx, self.commitment, &self.encrypted_blinding_factor[0..32])
+        write!(f, "TransparentNote {{ utxo: {:?}, value: {:?}, nonce: {:?}, r_g: {:?}, pk_r: {:?}, idx: {:?}, commitment: {:?}, encrypted_blinding_factor: {:?} }}", self.utxo, self.value, self.nonce, self.r_g.compress().to_bytes(), self.pk_r.compress().to_bytes(), self.idx, self.commitment, &self.encrypted_blinding_factor[0..32])
     }
 }
 

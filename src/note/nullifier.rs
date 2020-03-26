@@ -1,4 +1,4 @@
-use crate::Scalar;
+use crate::{rpc, Scalar};
 
 use std::hash::{Hash, Hasher};
 

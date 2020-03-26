@@ -313,35 +313,35 @@ impl Transaction {
     ) -> Result<Self, Error> {
         let mut transaction = Transaction::default();
 
-        if let Some(f) = tx.fee {
-            transaction.set_fee(TransactionItem::try_from(f)?);
-        }
+        // if let Some(f) = tx.fee {
+        //     transaction.set_fee(TransactionItem::try_from(f)?);
+        // }
 
-        for i in tx.inputs {
-            transaction.push(TransactionItem::try_from_rpc_transaction_input(
-                db_path.as_ref(),
-                i,
-            )?);
-        }
+        // for i in tx.inputs {
+        //     transaction.push(TransactionItem::try_from_rpc_transaction_input(
+        //         db_path.as_ref(),
+        //         i,
+        //     )?);
+        // }
         for o in tx.outputs {
             transaction.push(TransactionItem::try_from(o)?);
         }
 
-        transaction.commitments = tx.commitments.into_iter().map(|p| p.into()).collect();
-        transaction.r1cs = if tx.r1cs.is_empty() {
-            None
-        } else {
-            Some(R1CSProof::from_bytes(tx.r1cs.as_slice())?)
-        };
+        // transaction.commitments = tx.commitments.into_iter().map(|p| p.into()).collect();
+        // transaction.r1cs = if tx.r1cs.is_empty() {
+        //     None
+        // } else {
+        //     Some(R1CSProof::from_bytes(tx.r1cs.as_slice())?)
+        // };
 
         trace!(
             "Transaction {} parsed",
             hex::encode(transaction.hash().as_bytes())
         );
 
-        if transaction.r1cs.is_some() {
-            transaction.verify()?;
-        }
+        // if transaction.r1cs.is_some() {
+        //     transaction.verify()?;
+        // }
 
         Ok(transaction)
     }
@@ -349,24 +349,17 @@ impl Transaction {
 
 impl Into<rpc::Transaction> for Transaction {
     fn into(self) -> rpc::Transaction {
-        let mut inputs = vec![];
+        let mut nullifiers = vec![];
         let mut outputs = vec![];
-        let fee = Some(self.fee.into());
 
         self.items.into_iter().for_each(|item| match item.utxo() {
-            NoteUtxoType::Input => inputs.push(item.into()),
+            NoteUtxoType::Input => nullifiers.push(item.nullifier().clone().into()),
             NoteUtxoType::Output => outputs.push(item.into()),
         });
 
-        let r1cs = self.r1cs.map(|p| p.to_bytes()).unwrap_or_default();
-        let commitments = self.commitments.iter().map(|p| (*p).into()).collect();
-
         rpc::Transaction {
-            inputs,
+            nullifiers,
             outputs,
-            fee,
-            r1cs,
-            commitments,
         }
     }
 }
