@@ -298,7 +298,7 @@ fn transactions_with_transparent_notes() {
 
 #[test]
 fn rpc_transaction() {
-    let mut root = Root::<_, Blake2b>::new("/tmp/phoenix-meme").unwrap();
+    let mut root = Root::<_, Blake2b>::new("/tmp/rusk-vm-demo").unwrap();
     let mut state: Db<_> = root.restore().unwrap();
 
     let mut senders = vec![];
@@ -319,6 +319,7 @@ fn rpc_transaction() {
     let nul = input.nullifier();
     println!("sender sk: {}", sk);
     println!("sender vk: {}", senders[0].1);
+    println!("{}", nul);
 
     // Persist changes to disk
     root.set_root(&mut state).unwrap();
@@ -326,7 +327,6 @@ fn rpc_transaction() {
     // Show us the keys!
     println!("{}", receivers[0].0);
 
-    // Now make the transactions. Fucking Victor didn't make this easy for me
     // Create an output of 97
     let pk = &receivers[0].2;
     let output = create_output_note::<TransparentNote>(pk, 97);

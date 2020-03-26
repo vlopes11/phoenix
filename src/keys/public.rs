@@ -108,6 +108,8 @@ impl fmt::UpperHex for PublicKey {
 
 impl fmt::Display for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self)
+        let a_g = self.a_g.compress().to_bytes();
+        let b_g = self.b_g.compress().to_bytes();
+        write!(f, "{:?}, {:?}", a_g, b_g)
     }
 }
